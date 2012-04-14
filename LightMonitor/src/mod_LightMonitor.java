@@ -21,14 +21,16 @@ public class mod_LightMonitor extends BaseMod {
 	private Minecraft mc;
 	private long lastKeyPress;
 	private FontRenderer fontRenderer;
-	private ScaledResolution scaledResolution;
+	private ScaledResolution scaledRes;
 	private int toggleKey;
 	private int tick = 0;
 	private boolean firstRun = true;
 	private Holder holder = new Holder();
 
 	private static File configFile;
-	private static Properties props;
+	private static Properties properties;
+	
+	private static final String DEFAULT_KEY = "L";
 	
 	private static final int[] BLOCK_BLACKLIST = {6, 30, 31, 37, 38, 39 , 40, 50, 55, 59, 63, 75, 76};
 	private static final int[] MOB_BLACKLIST = {8, 9, 10, 11, 20, 27, 28, 44, 53, 66, 70, 72};
@@ -44,10 +46,15 @@ public class mod_LightMonitor extends BaseMod {
 	private static final int UPDATE_ON_TICK = 7;
 
 	@Override
+	public String getVersion() {
+		return "1.8";
+	}
+	
+	@Override
 	public void load() {
 		mc = ModLoader.getMinecraftInstance();
 		fontRenderer = mc.fontRenderer;
-		scaledResolution = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
+		scaledRes = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
 		
 		lastKeyPress = System.currentTimeMillis();
 		
@@ -58,45 +65,45 @@ public class mod_LightMonitor extends BaseMod {
 	}
 	
 	private void loadConfig(){
-		props = new Properties();
+		properties = new Properties();
 		
 		if(configFile.exists()){
 			try {
-				props.load(new FileInputStream(configFile));
+				properties.load(new FileInputStream(configFile));
 			} catch (FileNotFoundException e) {
 				System.out.println("[LightMonitor] Config file not found!\n" + e.getMessage());
 			} catch (IOException e) {
 				System.out.println("[LightMonitor] Could not load config file!\n" + e.getMessage());
 			}
 			
-			holder.viewState = Integer.parseInt(props.getProperty("ViewState", Integer.toString(1)));
-			toggleKey = Keyboard.getKeyIndex(props.getProperty("ToggleKey", "L"));
-			firstRun = Boolean.parseBoolean(props.getProperty("firstRun", "false"));
-			holder.shadow = Boolean.parseBoolean(props.getProperty("DrawTextWithShadow", "true"));
-			holder.background = Boolean.parseBoolean(props.getProperty("ShowBackground", "true"));
+			holder.viewState = Integer.parseInt(properties.getProperty("ViewState", "1"));
+			toggleKey = Keyboard.getKeyIndex(properties.getProperty("ToggleKey", DEFAULT_KEY));
+			firstRun = Boolean.parseBoolean(properties.getProperty("firstRun", "false"));
+			holder.shadow = Boolean.parseBoolean(properties.getProperty("DrawTextWithShadow", "true"));
+			holder.background = Boolean.parseBoolean(properties.getProperty("ShowBackground", "true"));
 		} else {
 			try {
 				configFile.createNewFile();
-				props.load(new FileInputStream(configFile));
+				properties.load(new FileInputStream(configFile));
 			} catch (IOException e) {
 				System.out.println("[LightMonitor] Could not create config file!\n" + 
 						e.getMessage());
 			}
 			
-			props.setProperty("ViewState", Integer.toString(1));
-			props.setProperty("ToggleKey", "L");
-			props.setProperty("firstRun", "false");
-			props.setProperty("DrawTextWithShadow", "true");
-			props.setProperty("ShowBackground", "true");
+			properties.setProperty("ViewState", "1");
+			properties.setProperty("ToggleKey", DEFAULT_KEY);
+			properties.setProperty("firstRun", "false");
+			properties.setProperty("DrawTextWithShadow", "true");
+			properties.setProperty("ShowBackground", "true");
 
 			holder.viewState = 1;
-			toggleKey = Keyboard.getKeyIndex("L");
+			toggleKey = Keyboard.getKeyIndex(DEFAULT_KEY);
 			firstRun = true;
 			holder.shadow = true;
 			holder.background = true;
 			
 			try {
-				props.store(new FileOutputStream(configFile), "LightMonitor Config File\nDraw Text With Shadow: Toggles whether the display text draws with shadow\nToggle Key: Toggles the LightMonitor display");
+				properties.store(new FileOutputStream(configFile), "LightMonitor Config File\nDraw Text With Shadow: Toggles whether the display text draws with shadow\nToggle Key: Toggles the LightMonitor display");
 			} catch (FileNotFoundException e) {
 				System.out.println("[LightMonitor] Config file not found!\n" + e.getMessage());
 			} catch (IOException e) {
@@ -137,7 +144,7 @@ public class mod_LightMonitor extends BaseMod {
 			tick = 0;
 		}
 		
-		if(mc.theWorld != null && mc.thePlayer != null){
+		if(mc.theWorld != null && mc.thePlayer != null && !mc.gameSettings.showDebugInfo && mc.playerController.shouldDrawHUD() && mc.currentScreen == null){
 			if(Keyboard.isKeyDown(toggleKey) && System.currentTimeMillis() - lastKeyPress > 200L){
 				lastKeyPress = System.currentTimeMillis();
 				holder.viewState = (holder.viewState == 0) ? 1 : (holder.viewState == 1) ? 2 : 0;
@@ -155,8 +162,8 @@ public class mod_LightMonitor extends BaseMod {
 	}
 
 	private void drawHud() {
-		int height = scaledResolution.getScaledHeight();
-		int width = scaledResolution.getScaledWidth();
+		int height = scaledRes.getScaledHeight();
+		int width = scaledRes.getScaledWidth();
 		
 		if (holder.viewState == 1) {
 			if (holder.background) {
@@ -224,9 +231,9 @@ public class mod_LightMonitor extends BaseMod {
 			blockBelow = mc.theWorld.getBlockId(playerX, blockY - 2, playerZ);
 		}
 		
-		holder.light = mc.theWorld.getBlockLightValue(playerX, blockY, playerZ);		
+		holder.light = getLight(playerX, blockY, playerZ);		
 		
-		scaledResolution = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
+		scaledRes = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
 		
 		holder.slimes = (mc.theWorld.getChunkFromBlockCoords(playerX, playerZ).getRandomWithSeed(0x3ad8025fL).nextInt(10) == 0);
 		holder.mobs = (holder.light <=7 && !inBlacklist(blockBelow, MOB_BLACKLIST));
@@ -241,6 +248,14 @@ public class mod_LightMonitor extends BaseMod {
 		
 		holder.grass = (holder.light >= 4 && (blockBelow == 2 || blockBelow == 3));
 		holder.mushrooms = (holder.light <= 12 && !(blockBelow == 8 || blockBelow == 9 || blockBelow == 10 || blockBelow == 11));
+	}
+	
+	private int getLight(int x, int y, int z) {
+		if(y < 0 || y > 255) {
+			return 0;
+		}
+		
+		return mc.theWorld.getChunkFromChunkCoords(x >> 4, z >> 4).getBlockLightValue(x & 0xf, y, z & 0xf, mc.theWorld.calculateSkylightSubtracted(1.0f));
 	}
 	
 	private void drawRect(int x1, int y1, int x2, int y2, int c) {
@@ -311,11 +326,6 @@ public class mod_LightMonitor extends BaseMod {
 		GL11.glEnable(GL11.GL_ALPHA_TEST);
 		GL11.glEnable(GL11.GL_TEXTURE_2D);
 	}*/
-	
-	@Override
-	public String getVersion() {
-		return "1.7";
-	}
 
 	
 	private class Holder {

@@ -13,31 +13,33 @@ import net.minecraft.client.Minecraft;
 
 public class mod_SpeedMiner extends BaseMod {
 	
-	private int mToggleKey;
-	private long mLastKeyPress;
-	private ScaledResolution mScaledResolution;
+	private int toggleKey;
+	private long lastKeyPress;
+	private ScaledResolution scaledRes;
 	private Minecraft mc;
-	private Properties mProperties;
-	private boolean mFading = false;
-	private long mFadeStart;
-	private int mPrevAlpha;
+	private Properties properties;
+	private boolean fading = false;
+	private long fadeStart;
+	private int prevAlpha;
 	
 	private static boolean speedMining = false;
 	private static File configFile;
+	
+	private static final String DEFAULT_KEY = "O";
 	
 	private static final int TEXT_Y_OFFSET = 1;
 	private static final long FADE_TIME = 2000L;
 	
 	@Override
 	public String getVersion() {
-		return "1.3";
+		return "1.4";
 	}
 
 	@Override
 	public void load() {
 		mc = ModLoader.getMinecraftInstance();
-		mLastKeyPress = System.currentTimeMillis();
-		mScaledResolution = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
+		lastKeyPress = System.currentTimeMillis();
+		scaledRes = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
 		
 		configFile = new File(Minecraft.getMinecraftDir(), "mods/SpeedMiner.config");
 		
@@ -56,41 +58,41 @@ public class mod_SpeedMiner extends BaseMod {
 	
 	private void loadConfig() throws FileNotFoundException, IOException {
 		
-		mProperties = new Properties();
+		properties = new Properties();
 		
 		if(configFile.exists()){
-			mProperties.load(new FileInputStream(configFile));
+			properties.load(new FileInputStream(configFile));
 			
-			mToggleKey = Keyboard.getKeyIndex(mProperties.getProperty("ToggleKey", "L"));
+			toggleKey = Keyboard.getKeyIndex(properties.getProperty("ToggleKey", DEFAULT_KEY));
 		} else {
 			configFile.createNewFile();
-			mProperties.load(new FileInputStream(configFile));
+			properties.load(new FileInputStream(configFile));
 			
-			mProperties.setProperty("ToggleKey", "O");
-			mToggleKey = Keyboard.getKeyIndex("O");
+			properties.setProperty("ToggleKey", DEFAULT_KEY);
+			toggleKey = Keyboard.getKeyIndex(DEFAULT_KEY);
 			
-			mProperties.store(new FileOutputStream(configFile), "SpeedMiner Config File - by phlip9");
+			properties.store(new FileOutputStream(configFile), "SpeedMiner Config File - by phlip9");
 		}
 	}
 	
 	@Override
 	public boolean onTickInGame(float f, final Minecraft mc) {
 		if(mc.theWorld != null && mc.thePlayer != null && !mc.gameSettings.showDebugInfo && mc.playerController.shouldDrawHUD() && mc.currentScreen == null){
-			if(Keyboard.isKeyDown(mToggleKey) && System.currentTimeMillis() - mLastKeyPress > 200L){
-				mLastKeyPress = System.currentTimeMillis();
+			if(Keyboard.isKeyDown(toggleKey) && System.currentTimeMillis() - lastKeyPress > 200L){
+				lastKeyPress = System.currentTimeMillis();
 				speedMining = !speedMining;
 				
-				mScaledResolution = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
+				scaledRes = new ScaledResolution(mc.gameSettings, mc.displayWidth, mc.displayHeight);
 				
-				mFadeStart = System.currentTimeMillis();
-				mFading = true;
-				mPrevAlpha = 0xFF;
+				fadeStart = System.currentTimeMillis();
+				fading = true;
+				prevAlpha = 0xFF;
 				
 				System.out.println("SpeedMiner " + ((speedMining) ? "Enabled" : "Disabled"));
 			}
 
-			if(mFading){
-				long deltaTime = System.currentTimeMillis() - mFadeStart;
+			if(fading){
+				long deltaTime = System.currentTimeMillis() - fadeStart;
 				
 				if(deltaTime < FADE_TIME){
 					String toDisplay = new StringBuilder().append("Speed Mining ").append((speedMining) ? "Enabled" : "Disabled").toString();
@@ -105,12 +107,12 @@ public class mod_SpeedMiner extends BaseMod {
 					
 					mc.fontRenderer.drawString(
 							toDisplay, 
-							((mScaledResolution.getScaledWidth() / 2) - mc.fontRenderer.getStringWidth(toDisplay) / 2),
+							((scaledRes.getScaledWidth() / 2) - mc.fontRenderer.getStringWidth(toDisplay) / 2),
 							TEXT_Y_OFFSET, 
 							greyscale);
 
 				} else {
-					mFading = false;
+					fading = false;
 				}
 			}
 		}

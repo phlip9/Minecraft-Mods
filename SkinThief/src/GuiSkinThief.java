@@ -60,7 +60,7 @@ public class GuiSkinThief extends GuiScreen {
 	private static final int CANCEL = 1;
 	private static final int SAVE = 2;
 	private static final int PERMANENT = 3;
-
+	
 	public GuiSkinThief(ISkinThief skinThief) {
 		startTime = System.currentTimeMillis();
 		
@@ -84,23 +84,26 @@ public class GuiSkinThief extends GuiScreen {
 		controlList.add(new GuiButton(SAVE, width / 2 - 100, 92, 99, 20, saveSkinToFileYesNo(save)));
 		controlList.add(new GuiButton(PERMANENT, width / 2 + 2, 92, 99, 20, changeCurrentSkinYesNo(permanent)));
 		
-		skinTextField = new GuiTextField(this, fontRenderer, width / 2 - 100 - 8, 40, 220, 20, skinThief.getUsername());
-		skinTextField.isFocused = true;
+		skinTextField = new GuiTextField(fontRenderer, width / 2 - 100 - 8, 40, 220, 20);
+		skinTextField.setText(skinThief.getUsername());
+		skinTextField.func_50033_b(true);
 		
-		usernameTextField = new GuiTextField(this, fontRenderer, width / 2 - 48, 160, 160, 20, skinThief.getUsername());
+		usernameTextField = new GuiTextField(fontRenderer, width / 2 - 48, 160, 160, 20);
 		usernameTextField.setMaxStringLength(30);
-		usernameTextField.isFocused = false;
+		usernameTextField.setText(skinThief.getUsername());
+		usernameTextField.func_50033_b(false);
 		
 		StringBuilder asterisks = new StringBuilder();
 		for(int i = 0; i < skinThief.getPassword().length(); i++) {
 			asterisks.append('*');
 		}
 		
-		passwordTextField = new GuiTextField(this, fontRenderer, width / 2 - 48, 185, 160, 20, asterisks.toString());
+		passwordTextField = new GuiTextField(fontRenderer, width / 2 - 48, 185, 160, 20);
 		passwordTextField.setMaxStringLength(30);
-		passwordTextField.isFocused = false;
+		passwordTextField.setText(asterisks.toString());
+		passwordTextField.func_50033_b(false);
 	}
-
+	
 	public void onGuiClosed() {
 		Keyboard.enableRepeatEvents(false);
 	}
@@ -161,25 +164,28 @@ public class GuiSkinThief extends GuiScreen {
 	protected void keyTyped(char c, int i) {
 		if(System.currentTimeMillis() - startTime > 300L){
 			
-			if (skinTextField.isFocused && skinTextField.isEnabled) {
+			// Failed Decompiling Table:
+			// func_50025_j() = isFocused
+			// func_50037_a(char, int) = textboxKeyTyped(char, int)
+			if (skinTextField.func_50025_j()) {
 				if(handlePaste(c, skinTextField)) {
 					return;
 				}
 				
-				skinTextField.textboxKeyTyped(c, i);
+				skinTextField.func_50037_a(c, i);
 			}
 			
-			if(usernameTextField.isFocused && usernameTextField.isFocused) {
+			if(usernameTextField.func_50025_j()) {
 				if(handlePaste(c, usernameTextField)) {
 					return;
 				}
 				
-				usernameTextField.textboxKeyTyped(c, i);
+				usernameTextField.func_50037_a(c, i);
 				
 				skinThief.setUsername(usernameTextField.getText().trim());
 			}
 			
-			if(passwordTextField.isFocused && passwordTextField.isFocused) {
+			if(passwordTextField.func_50025_j()) {
 				if(handlePaste(c, passwordTextField)) {
 					return;
 				}
@@ -200,7 +206,7 @@ public class GuiSkinThief extends GuiScreen {
 					i = 0;
 				}
 				
-				passwordTextField.textboxKeyTyped(c, i);
+				passwordTextField.func_50037_a(c, i);
 			}
 			
 			if(c == '\r' || c == '\n'){
@@ -220,16 +226,19 @@ public class GuiSkinThief extends GuiScreen {
 				mc.setIngameFocus();
 			}
 			
+			// Failed Decompile Table:
+			// func_50025_j() = isFocused
+			// func_50033_b(boolean) = setFocused(boolean)
 			if(c == '\t') {
-				if(skinTextField.isFocused) {
-					skinTextField.isFocused = false;
-					usernameTextField.isFocused = true;
-				} else if(usernameTextField.isFocused) {
-					usernameTextField.isFocused = false;
-					passwordTextField.isFocused = true;
+				if(skinTextField.func_50025_j()) {
+					skinTextField.func_50033_b(false);
+					usernameTextField.func_50033_b(true);
+				} else if(usernameTextField.func_50025_j()) {
+					usernameTextField.func_50033_b(false);
+					passwordTextField.func_50033_b(true);
 				} else {
-					passwordTextField.isFocused = false;
-					skinTextField.isFocused = true;
+					passwordTextField.func_50033_b(false);
+					skinTextField.func_50033_b(true);
 				}
 				
 				return;

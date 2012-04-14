@@ -35,7 +35,7 @@ public class mod_SkinThief extends BaseMod {
 	private String notificationText = "";
 	private boolean showNotification = false;
 	private static final long NOTIFICATION_LENGTH = 2000L;
-	private static final int skip = 6;
+	private static final int DEGREE_SKIP = 6;
 	
 	private boolean shouldReconnect = false;
 	
@@ -47,25 +47,36 @@ public class mod_SkinThief extends BaseMod {
 	private int guiOpenKey;
 	private File configFile;
 	
-	private static final String defaultKey = "P";
+	private static final String DEFAULT_KEY = "P";
+	
+	// Reflection constants for debugging and release (when it's obfuscated)
+	public static final boolean DEBUG = true;
+	private static final String SEND_QUEUE = (DEBUG) ? "sendQueue" : "H";
+	private static final String NET_MANAGER = (DEBUG) ? "netManager" : "g";
+	private static final String NETWORK_SOCKET = (DEBUG) ? "networkSocket" : "h";
 
+	@Override
+	public String getVersion() {
+		return "2.1";
+	}
+	
 	private void loadConfig() throws FileNotFoundException, IOException{
 		properties = new Properties();
 		
 		if(configFile.exists()){
 			properties.load(new FileInputStream(configFile));
 			
-			guiOpenKey = Keyboard.getKeyIndex(properties.getProperty("guiOpenKey", defaultKey));
+			guiOpenKey = Keyboard.getKeyIndex(properties.getProperty("guiOpenKey", DEFAULT_KEY));
 			playerName = properties.getProperty("lastPlayerName", mc.session.username);
 			
 		} else {
 			configFile.createNewFile();
 			properties.load(new FileInputStream(configFile));
 			
-			properties.setProperty("guiOpenKey", defaultKey);
+			properties.setProperty("guiOpenKey", DEFAULT_KEY);
 			properties.setProperty("lastPlayerName", mc.session.username);
 
-			guiOpenKey = Keyboard.getKeyIndex(defaultKey);
+			guiOpenKey = Keyboard.getKeyIndex(DEFAULT_KEY);
 			playerName = mc.session.username;
 
 			properties.store(new FileOutputStream(configFile), "SkinThief Config File");
@@ -136,22 +147,22 @@ public class mod_SkinThief extends BaseMod {
 		t.addVertex(x + (l / 2), y + (w / 2), 0.0D); // rectangle center
 		
 		// lower right quarter circle
-		for(int i = 0; i < 90; i += skip) {
+		for(int i = 0; i < 90; i += DEGREE_SKIP) {
 			t.addVertex(x + l - r + (Math.sin((i * Math.PI / 180)) * r), y + w - r + (Math.cos((i * Math.PI / 180)) * r), 0.0D);
 		}
 		
 		// upper right quarter circle
-		for(int i = 90; i < 180; i += skip) {
+		for(int i = 90; i < 180; i += DEGREE_SKIP) {
 			t.addVertex(x + l - r + (Math.sin((i * Math.PI / 180)) * r), y + r + (Math.cos((i * Math.PI / 180)) * r), 0.0D);
 		}
 		
 		// upper left quarter circle
-		for(int i = 180; i < 270; i += skip) {
+		for(int i = 180; i < 270; i += DEGREE_SKIP) {
 			t.addVertex(x + r + (Math.sin((i * Math.PI / 180)) * r), y + r + (Math.cos((i * Math.PI / 180)) * r), 0.0D);
 		}
 		
 		// lower left quarter circle
-		for(int i = 270; i < 360; i += skip) {
+		for(int i = 270; i < 360; i += DEGREE_SKIP) {
 			t.addVertex(x + r + (Math.sin((i * Math.PI / 180)) * r), y + w - r + (Math.cos((i * Math.PI / 180)) * r), 0.0D);
 		}
 		
@@ -267,20 +278,20 @@ public class mod_SkinThief extends BaseMod {
 		int port = 0;
 		
 		try {
-			Field f1 = WorldClient.class.getDeclaredField("H" /*sendQueue*/);
-			f1.setAccessible(true);
+			Field f_sendQueue = WorldClient.class.getDeclaredField(SEND_QUEUE);
+			f_sendQueue.setAccessible(true);
 			
-			NetClientHandler netHandler = (NetClientHandler) f1.get(mc.theWorld);
+			NetClientHandler netHandler = (NetClientHandler) f_sendQueue.get(mc.theWorld);
 			
-			Field f2 = NetClientHandler.class.getDeclaredField("g" /*netManager*/);
-			f2.setAccessible(true);
+			Field f_netManager = NetClientHandler.class.getDeclaredField(NET_MANAGER);
+			f_netManager.setAccessible(true);
 			
-			NetworkManager netManager = (NetworkManager) f2.get(netHandler);
+			NetworkManager netManager = (NetworkManager) f_netManager.get(netHandler);
 			
-			Field f3 = NetworkManager.class.getDeclaredField("h" /*networkSocket*/);
-			f3.setAccessible(true);
+			Field f_networkSocket = NetworkManager.class.getDeclaredField(NETWORK_SOCKET);
+			f_networkSocket.setAccessible(true);
 			
-			Socket socket = (Socket) f3.get(netManager);
+			Socket socket = (Socket) f_networkSocket.get(netManager);
 			
 			server = socket.getInetAddress().getHostAddress();
 			port = socket.getPort();
@@ -308,11 +319,6 @@ public class mod_SkinThief extends BaseMod {
 		notificationText = notification;
 		notificationStart = System.currentTimeMillis();
 		showNotification = true;
-	}
-	
-	@Override
-	public String getVersion() {
-		return "1.9";
 	}
 
 	@Override
