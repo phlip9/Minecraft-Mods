@@ -1,7 +1,8 @@
 Minecraft Mods
 ==============
 
-Author: phlip9
+Author:  phlip9
+Repository:  https://github.com/phlip9/Minecraft-Mods
 
 
 SkinThief
@@ -12,10 +13,11 @@ SkinThief
 
 Minecraft Forum post: http://www.minecraftforum.net/topic/681859-123-skinthief-steal-someones-skin-in-game/
 
-TODO:	Change skin from file
-	UI redesign
-	Notification Popup could use some anti-aliasing on the rounded rectangle curves
-	Documentation
+TODO:
+- Change skin from file
+- UI redesign
+- Notification Popup could use some anti-aliasing on the rounded rectangle curves
+- Documentation
 
 
 LightMonitor
@@ -24,8 +26,9 @@ LightMonitor
 
 Minecraft Forum post: http://www.minecraftforum.net/topic/496037-123-light-monitor-in-game-light-level-display-no-item-in-game-overlay/
 
-TODO:	Overlay redesign
-	Documentation
+TODO:
+- Overlay redesign
+- Documentation
 
 
 SpeedMiner
@@ -36,14 +39,15 @@ SpeedMiner
 
 Minecraft Forum post: http://www.minecraftforum.net/topic/482792-123-speedminer-break-blocks-2x-faster-multiplayer/
 
-TODO: Auto tool switcher: switch from pick to shovel if the block changes from something like stone to sand.
+TODO:
+- Auto tool switcher: switch from pick to shovel if the block changes from something like stone to sand.
 
 
 Build Instructions:
 -------------------
 
 1. Have Java, MCP, and Eclipse properly set up. Instructions can be found here: http://mcp.ocean-labs.de/
-2. Clean the MCP build environment (hint: use clean.bat for Windows and clean.sh for Mac/Linux.)
+2. Clean the MCP build environment (hint: use cleanup.bat for Windows and cleanup.sh for Mac/Linux.)
 3. Decompile minecraft with decompile.(bat/sh) *Note* Make sure you have Modloader installed in the minecraft.jar you are decompiling!
 4. Copy the files from the source directory of the mod you wish to build.
 5. Paste these files into the src/minecraft/net/minecraft/src folder.
