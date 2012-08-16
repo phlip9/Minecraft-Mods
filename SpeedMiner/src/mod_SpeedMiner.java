@@ -32,7 +32,7 @@ public class mod_SpeedMiner extends BaseMod {
 	
 	@Override
 	public String getVersion() {
-		return "1.4";
+		return "1.4.1";
 	}
 
 	@Override

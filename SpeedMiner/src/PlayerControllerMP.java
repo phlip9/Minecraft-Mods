@@ -2,68 +2,79 @@ package net.minecraft.src;
 
 import net.minecraft.client.Minecraft;
 
-public class PlayerControllerMP extends PlayerController
+public class PlayerControllerMP
 {
+    /** The Minecraft instance. */
+    private final Minecraft mc;
+    private final NetClientHandler netClientHandler;
+
     /** PosX of the current block being destroyed */
-    private int currentBlockX;
+    private int currentBlockX = -1;
 
     /** PosY of the current block being destroyed */
-    private int currentBlockY;
+    private int currentBlockY = -1;
 
     /** PosZ of the current block being destroyed */
-    private int currentblockZ;
+    private int currentblockZ = -1;
 
     /** Current block damage (MP) */
-    private float curBlockDamageMP;
+    private float curBlockDamageMP = 0.0F;
 
     /** Previous block damage (MP) */
-    private float prevBlockDamageMP;
+    private float prevBlockDamageMP = 0.0F;
 
     /**
      * Tick counter, when it hits 4 it resets back to 0 and plays the step sound
      */
-    private float stepSoundTickCounter;
+    private float stepSoundTickCounter = 0.0F;
 
     /**
      * Delays the first damage on the block after the first click on the block
      */
-    private int blockHitDelay;
+    private int blockHitDelay = 0;
 
     /** Tells if the player is hitting a block */
-    private boolean isHittingBlock;
-    private boolean creativeMode;
-    private NetClientHandler netClientHandler;
+    private boolean isHittingBlock = false;
+
+    /** Current game type for the player */
+    private EnumGameType currentGameType;
 
     /** Index of the current item held by the player in the inventory hotbar */
     private int currentPlayerItem;
 
     public PlayerControllerMP(Minecraft par1Minecraft, NetClientHandler par2NetClientHandler)
     {
-        super(par1Minecraft);
-        currentBlockX = -1;
-        currentBlockY = -1;
-        currentblockZ = -1;
-        curBlockDamageMP = 0.0F;
-        prevBlockDamageMP = 0.0F;
-        stepSoundTickCounter = 0.0F;
-        blockHitDelay = 0;
-        isHittingBlock = false;
-        currentPlayerItem = 0;
-        netClientHandler = par2NetClientHandler;
+        this.currentGameType = EnumGameType.SURVIVAL;
+        this.currentPlayerItem = 0;
+        this.mc = par1Minecraft;
+        this.netClientHandler = par2NetClientHandler;
     }
 
-    public void setCreative(boolean par1)
+    public static void func_78744_a(Minecraft par0Minecraft, PlayerControllerMP par1PlayerControllerMP, int par2, int par3, int par4, int par5)
     {
-        creativeMode = par1;
+        if (!par0Minecraft.theWorld.extinguishFire(par0Minecraft.thePlayer, par2, par3, par4, par5))
+        {
+            par1PlayerControllerMP.onPlayerDestroyBlock(par2, par3, par4, par5);
+        }
+    }
 
-        if (creativeMode)
-        {
-            PlayerControllerCreative.enableAbilities(mc.thePlayer);
-        }
-        else
-        {
-            PlayerControllerCreative.disableAbilities(mc.thePlayer);
-        }
+    public void func_78748_a(EntityPlayer par1EntityPlayer)
+    {
+        this.currentGameType.configurePlayerCapabilities(par1EntityPlayer.capabilities);
+    }
+
+    public boolean func_78747_a()
+    {
+        return false;
+    }
+
+    /**
+     * Sets the game type for the player.
+     */
+    public void setGameType(EnumGameType par1EnumGameType)
+    {
+        this.currentGameType = par1EnumGameType;
+        this.currentGameType.configurePlayerCapabilities(this.mc.thePlayer.capabilities);
     }
 
     /**
@@ -71,12 +82,12 @@ public class PlayerControllerMP extends PlayerController
      */
     public void flipPlayer(EntityPlayer par1EntityPlayer)
     {
-        par1EntityPlayer.rotationYaw = -180F;
+        par1EntityPlayer.rotationYaw = -180.0F;
     }
 
     public boolean shouldDrawHUD()
     {
-        return !creativeMode;
+        return this.currentGameType.func_77144_e();
     }
 
     /**
@@ -84,27 +95,48 @@ public class PlayerControllerMP extends PlayerController
      */
     public boolean onPlayerDestroyBlock(int par1, int par2, int par3, int par4)
     {
-        if (creativeMode)
+        if (this.currentGameType.isAdventure())
         {
-            return super.onPlayerDestroyBlock(par1, par2, par3, par4);
+            return false;
         }
-
-        int i = mc.theWorld.getBlockId(par1, par2, par3);
-        boolean flag = super.onPlayerDestroyBlock(par1, par2, par3, par4);
-        ItemStack itemstack = mc.thePlayer.getCurrentEquippedItem();
-
-        if (itemstack != null)
+        else
         {
-            itemstack.onDestroyBlock(i, par1, par2, par3, mc.thePlayer);
+            WorldClient var5 = this.mc.theWorld;
+            Block var6 = Block.blocksList[var5.getBlockId(par1, par2, par3)];
 
-            if (itemstack.stackSize == 0)
+            if (var6 == null)
             {
-                itemstack.onItemDestroyedByUse(mc.thePlayer);
-                mc.thePlayer.destroyCurrentEquippedItem();
+                return false;
+            }
+            else
+            {
+                var5.playAuxSFX(2001, par1, par2, par3, var6.blockID + (var5.getBlockMetadata(par1, par2, par3) << 12));
+                int var7 = var5.getBlockMetadata(par1, par2, par3);
+                boolean var8 = var5.setBlockWithNotify(par1, par2, par3, 0);
+
+                if (var8)
+                {
+                    var6.onBlockDestroyedByPlayer(var5, par1, par2, par3, var7);
+                }
+
+                if (!this.currentGameType.isCreative())
+                {
+                    ItemStack var9 = this.mc.thePlayer.getCurrentEquippedItem();
+
+                    if (var9 != null)
+                    {
+                        var9.func_77941_a(var5, var6.blockID, par1, par2, par3, this.mc.thePlayer);
+
+                        if (var9.stackSize == 0)
+                        {
+                            this.mc.thePlayer.destroyCurrentEquippedItem();
+                        }
+                    }
+                }
+
+                return var8;
             }
         }
-
-        return flag;
     }
 
     /**
@@ -112,35 +144,39 @@ public class PlayerControllerMP extends PlayerController
      */
     public void clickBlock(int par1, int par2, int par3, int par4)
     {
-        if (creativeMode)
+        if (!this.currentGameType.isAdventure())
         {
-            netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
-            PlayerControllerCreative.clickBlockCreative(mc, this, par1, par2, par3, par4);
-            blockHitDelay = (mod_SpeedMiner.isSpeedMining()) ? 0 : 5; 							// <-._.-~``~-._.-~``~-._.-~``~ Modification
-        }
-        else if (!isHittingBlock || par1 != currentBlockX || par2 != currentBlockY || par3 != currentblockZ)
-        {
-            netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
-            int i = mc.theWorld.getBlockId(par1, par2, par3);
-
-            if (i > 0 && curBlockDamageMP == 0.0F)
+            if (this.currentGameType.isCreative())
             {
-                Block.blocksList[i].onBlockClicked(mc.theWorld, par1, par2, par3, mc.thePlayer);
+                this.netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
+                func_78744_a(this.mc, this, par1, par2, par3, par4);
+				this.blockHitDelay = mod_SpeedMiner.isSpeedMining() ? 0 : 5;  // <------------------- Modification
             }
+            else if (!this.isHittingBlock || par1 != this.currentBlockX || par2 != this.currentBlockY || par3 != this.currentblockZ)
+            {
+                this.netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
+                int var5 = this.mc.theWorld.getBlockId(par1, par2, par3);
 
-            if (i > 0 && Block.blocksList[i].blockStrength(mc.thePlayer) >= 1.0F)
-            {
-                onPlayerDestroyBlock(par1, par2, par3, par4);
-            }
-            else
-            {
-                isHittingBlock = true;
-                currentBlockX = par1;
-                currentBlockY = par2;
-                currentblockZ = par3;
-                curBlockDamageMP = 0.0F;
-                prevBlockDamageMP = 0.0F;
-                stepSoundTickCounter = 0.0F;
+                if (var5 > 0 && this.curBlockDamageMP == 0.0F)
+                {
+                    Block.blocksList[var5].onBlockClicked(this.mc.theWorld, par1, par2, par3, this.mc.thePlayer);
+                }
+
+                if (var5 > 0 && Block.blocksList[var5].getPlayerRelativeBlockHardness(this.mc.thePlayer, this.mc.thePlayer.worldObj, par1, par2, par3) >= 1.0F)
+                {
+                    this.onPlayerDestroyBlock(par1, par2, par3, par4);
+                }
+                else
+                {
+                    this.isHittingBlock = true;
+                    this.currentBlockX = par1;
+                    this.currentBlockY = par2;
+                    this.currentblockZ = par3;
+                    this.curBlockDamageMP = 0.0F;
+                    this.prevBlockDamageMP = 0.0F;
+                    this.stepSoundTickCounter = 0.0F;
+                    this.mc.theWorld.destroyBlockInWorldPartially(this.mc.thePlayer.entityId, this.currentBlockX, this.currentBlockY, this.currentblockZ, (int)(this.curBlockDamageMP * 10.0F) - 1);
+                }
             }
         }
     }
@@ -150,8 +186,14 @@ public class PlayerControllerMP extends PlayerController
      */
     public void resetBlockRemoving()
     {
-        curBlockDamageMP = 0.0F;
-        isHittingBlock = false;
+        if (this.isHittingBlock)
+        {
+            this.netClientHandler.addToSendQueue(new Packet14BlockDig(1, this.currentBlockX, this.currentBlockY, this.currentblockZ, -1));
+        }
+
+        this.isHittingBlock = false;
+        this.curBlockDamageMP = 0.0F;
+        this.mc.theWorld.destroyBlockInWorldPartially(this.mc.thePlayer.entityId, this.currentBlockX, this.currentBlockY, this.currentblockZ, -1);
     }
 
     /**
@@ -159,86 +201,66 @@ public class PlayerControllerMP extends PlayerController
      */
     public void onPlayerDamageBlock(int par1, int par2, int par3, int par4)
     {
-        syncCurrentPlayItem();
+        this.syncCurrentPlayItem();
 
-        if (blockHitDelay > 0)
+        if (this.blockHitDelay > 0)
         {
-            blockHitDelay--;
-            return;
+            --this.blockHitDelay;
         }
-
-        if (creativeMode)
+        else if (this.currentGameType.isCreative())
         {
-        	blockHitDelay = mod_SpeedMiner.isSpeedMining() ? 0 : 5; 			// <-._.-~``~-._.-~``~-._.-~``~ Modification
-            netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
-            PlayerControllerCreative.clickBlockCreative(mc, this, par1, par2, par3, par4);
-            return;
-        }
-
-        if (par1 == currentBlockX && par2 == currentBlockY && par3 == currentblockZ)
-        {
-            int i = mc.theWorld.getBlockId(par1, par2, par3);
-
-            if (i == 0)
-            {
-                isHittingBlock = false;
-                return;
-            }
-
-            Block block = Block.blocksList[i];
-            
-            if (mod_SpeedMiner.isSpeedMining()) {							// <-._.-~``~-._.-~``~-._.-~``~ Modification
-				curBlockDamageMP = (float)(curBlockDamageMP + block.blockStrength(mc.thePlayer) * 1.372D);
-				prevBlockDamageMP = 0.36f;
-			} else {
-				curBlockDamageMP += block.blockStrength(mc.thePlayer);
-			}
-
-            if (stepSoundTickCounter % 4F == 0.0F && block != null)
-            {
-                mc.sndManager.playSound(block.stepSound.getStepSound(), (float)par1 + 0.5F, (float)par2 + 0.5F, (float)par3 + 0.5F, (block.stepSound.getVolume() + 1.0F) / 8F, block.stepSound.getPitch() * 0.5F);
-            }
-
-            stepSoundTickCounter++;
-
-            if(mod_SpeedMiner.isSpeedMining()) {								// <-._.-~``~-._.-~``~-._.-~``~ Modification
-            	if(curBlockDamageMP >= 0.825f){
-            		isHittingBlock = false;
-            		netClientHandler.addToSendQueue(new Packet14BlockDig(2, par1, par2, par3, par4));
-            		onPlayerDestroyBlock(par1, par2, par3, par4);
-            		curBlockDamageMP = 0.0f;
-            		prevBlockDamageMP = 0.0f;
-            		stepSoundTickCounter = 0.0f;
-            		blockHitDelay = 0;
-            	}
-            } else if (curBlockDamageMP >= 1.0F) {
-                isHittingBlock = false;
-                netClientHandler.addToSendQueue(new Packet14BlockDig(2, par1, par2, par3, par4));
-                onPlayerDestroyBlock(par1, par2, par3, par4);
-                curBlockDamageMP = 0.0F;
-                prevBlockDamageMP = 0.0F;
-                stepSoundTickCounter = 0.0F;
-                blockHitDelay = 5;
-            }
+			this.blockHitDelay = mod_SpeedMiner.isSpeedMining() ? 0 : 5;  // <------------------- Modification
+            this.netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
+            func_78744_a(this.mc, this, par1, par2, par3, par4);
         }
         else
         {
-            clickBlock(par1, par2, par3, par4);
-        }
-    }
+            if (par1 == this.currentBlockX && par2 == this.currentBlockY && par3 == this.currentblockZ)
+            {
+                int var5 = this.mc.theWorld.getBlockId(par1, par2, par3);
 
-    public void setPartialTime(float par1)
-    {
-        if (curBlockDamageMP <= 0.0F)
-        {
-            mc.ingameGUI.damageGuiPartialTime = 0.0F;
-            mc.renderGlobal.damagePartialTime = 0.0F;
-        }
-        else
-        {
-            float f = prevBlockDamageMP + (curBlockDamageMP - prevBlockDamageMP) * par1;
-            mc.ingameGUI.damageGuiPartialTime = f;
-            mc.renderGlobal.damagePartialTime = f;
+                if (var5 == 0)
+                {
+                    this.isHittingBlock = false;
+                    return;
+                }
+
+                Block var6 = Block.blocksList[var5];
+				// Begin Modification
+				if (mod_SpeedMiner.isSpeedMining()) {
+					this.curBlockDamageMP += var6.getPlayerRelativeBlockHardness(this.mc.thePlayer, this.mc.thePlayer.worldObj, par1, par2, par3) * 1.372D;
+					// Need this line?
+					//prevBlockDamageMP = 0.36f;
+				} else {
+					// This was normal code
+					this.curBlockDamageMP += var6.getPlayerRelativeBlockHardness(this.mc.thePlayer, this.mc.thePlayer.worldObj, par1, par2, par3);
+				}
+				// End Modification
+
+                if (this.stepSoundTickCounter % 4.0F == 0.0F && var6 != null)
+                {
+                    this.mc.sndManager.playSound(var6.stepSound.getStepSound(), (float)par1 + 0.5F, (float)par2 + 0.5F, (float)par3 + 0.5F, (var6.stepSound.getVolume() + 1.0F) / 8.0F, var6.stepSound.getPitch() * 0.5F);
+                }
+
+                ++this.stepSoundTickCounter;
+
+                if (this.curBlockDamageMP >= (mod_SpeedMiner.isSpeedMining() ? 0.825f : 1.0F))  // <------------------- Modification
+                {
+                    this.isHittingBlock = false;
+                    this.netClientHandler.addToSendQueue(new Packet14BlockDig(2, par1, par2, par3, par4));
+                    this.onPlayerDestroyBlock(par1, par2, par3, par4);
+                    this.curBlockDamageMP = 0.0F;
+                    this.prevBlockDamageMP = 0.0F;
+                    this.stepSoundTickCounter = 0.0F;
+                    this.blockHitDelay = 5;
+                }
+
+                this.mc.theWorld.destroyBlockInWorldPartially(this.mc.thePlayer.entityId, this.currentBlockX, this.currentBlockY, this.currentblockZ, (int)(this.curBlockDamageMP * 10.0F) - 1);
+            }
+            else
+            {
+                this.clickBlock(par1, par2, par3, par4);
+            }
         }
     }
 
@@ -247,22 +269,15 @@ public class PlayerControllerMP extends PlayerController
      */
     public float getBlockReachDistance()
     {
-        return 5F;																// <-._.-~``~-._.-~``~-._.-~``~ Modification
-    }
-
-    /**
-     * Called on world change with the new World as the only parameter.
-     */
-    public void onWorldChange(World par1World)
-    {
-        super.onWorldChange(par1World);
+		// Modification
+		return 5F;
     }
 
     public void updateController()
     {
-        syncCurrentPlayItem();
-        prevBlockDamageMP = curBlockDamageMP;
-        mc.sndManager.playRandomMusicIfReady();
+        this.syncCurrentPlayItem();
+        this.prevBlockDamageMP = this.curBlockDamageMP;
+        this.mc.sndManager.playRandomMusicIfReady();
     }
 
     /**
@@ -270,46 +285,64 @@ public class PlayerControllerMP extends PlayerController
      */
     private void syncCurrentPlayItem()
     {
-        int i = mc.thePlayer.inventory.currentItem;
+        int var1 = this.mc.thePlayer.inventory.currentItem;
 
-        if (i != currentPlayerItem)
+        if (var1 != this.currentPlayerItem)
         {
-            currentPlayerItem = i;
-            netClientHandler.addToSendQueue(new Packet16BlockItemSwitch(currentPlayerItem));
+            this.currentPlayerItem = var1;
+            this.netClientHandler.addToSendQueue(new Packet16BlockItemSwitch(this.currentPlayerItem));
         }
     }
 
     /**
-     * Handles a players right click
+     * Handles a players right click. Args: player, world, x, y, z, side, hitVec
      */
-    public boolean onPlayerRightClick(EntityPlayer par1EntityPlayer, World par2World, ItemStack par3ItemStack, int par4, int par5, int par6, int par7)
+    public boolean onPlayerRightClick(EntityPlayer par1EntityPlayer, World par2World, ItemStack par3ItemStack, int par4, int par5, int par6, int par7, Vec3 par8Vec3)
     {
-        syncCurrentPlayItem();
-        netClientHandler.addToSendQueue(new Packet15Place(par4, par5, par6, par7, par1EntityPlayer.inventory.getCurrentItem()));
-        int i = par2World.getBlockId(par4, par5, par6);
+        this.syncCurrentPlayItem();
+        float var9 = (float)par8Vec3.xCoord - (float)par4;
+        float var10 = (float)par8Vec3.yCoord - (float)par5;
+        float var11 = (float)par8Vec3.zCoord - (float)par6;
+        boolean var12 = false;
+        int var13 = par2World.getBlockId(par4, par5, par6);
 
-        if (i > 0 && Block.blocksList[i].blockActivated(par2World, par4, par5, par6, par1EntityPlayer))
+        if (var13 > 0 && Block.blocksList[var13].onBlockActivated(par2World, par4, par5, par6, par1EntityPlayer, par7, var9, var10, var11))
+        {
+            var12 = true;
+        }
+
+        if (!var12 && par3ItemStack != null && par3ItemStack.getItem() instanceof ItemBlock)
+        {
+            ItemBlock var14 = (ItemBlock)par3ItemStack.getItem();
+
+            if (!var14.canPlaceItemBlockOnSide(par2World, par4, par5, par6, par7, par1EntityPlayer, par3ItemStack))
+            {
+                return false;
+            }
+        }
+
+        this.netClientHandler.addToSendQueue(new Packet15Place(par4, par5, par6, par7, par1EntityPlayer.inventory.getCurrentItem(), var9, var10, var11));
+
+        if (var12)
         {
             return true;
         }
-
-        if (par3ItemStack == null)
+        else if (par3ItemStack == null)
         {
             return false;
         }
-
-        if (creativeMode)
+        else if (this.currentGameType.isCreative())
         {
-            int j = par3ItemStack.getItemDamage();
-            int k = par3ItemStack.stackSize;
-            boolean flag = par3ItemStack.useItem(par1EntityPlayer, par2World, par4, par5, par6, par7);
-            par3ItemStack.setItemDamage(j);
-            par3ItemStack.stackSize = k;
-            return flag;
+            int var17 = par3ItemStack.getItemDamage();
+            int var15 = par3ItemStack.stackSize;
+            boolean var16 = par3ItemStack.tryPlaceItemIntoWorld(par1EntityPlayer, par2World, par4, par5, par6, par7, var9, var10, var11);
+            par3ItemStack.setItemDamage(var17);
+            par3ItemStack.stackSize = var15;
+            return var16;
         }
         else
         {
-            return par3ItemStack.useItem(par1EntityPlayer, par2World, par4, par5, par6, par7);
+            return par3ItemStack.tryPlaceItemIntoWorld(par1EntityPlayer, par2World, par4, par5, par6, par7, var9, var10, var11);
         }
     }
 
@@ -318,15 +351,31 @@ public class PlayerControllerMP extends PlayerController
      */
     public boolean sendUseItem(EntityPlayer par1EntityPlayer, World par2World, ItemStack par3ItemStack)
     {
-        syncCurrentPlayItem();
-        netClientHandler.addToSendQueue(new Packet15Place(-1, -1, -1, 255, par1EntityPlayer.inventory.getCurrentItem()));
-        boolean flag = super.sendUseItem(par1EntityPlayer, par2World, par3ItemStack);
-        return flag;
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new Packet15Place(-1, -1, -1, 255, par1EntityPlayer.inventory.getCurrentItem(), 0.0F, 0.0F, 0.0F));
+        int var4 = par3ItemStack.stackSize;
+        ItemStack var5 = par3ItemStack.useItemRightClick(par2World, par1EntityPlayer);
+
+        if (var5 == par3ItemStack && (var5 == null || var5.stackSize == var4))
+        {
+            return false;
+        }
+        else
+        {
+            par1EntityPlayer.inventory.mainInventory[par1EntityPlayer.inventory.currentItem] = var5;
+
+            if (var5.stackSize == 0)
+            {
+                par1EntityPlayer.inventory.mainInventory[par1EntityPlayer.inventory.currentItem] = null;
+            }
+
+            return true;
+        }
     }
 
-    public EntityPlayer createPlayer(World par1World)
+    public EntityClientPlayerMP func_78754_a(World par1World)
     {
-        return new EntityClientPlayerMP(mc, par1World, mc.session, netClientHandler);
+        return new EntityClientPlayerMP(this.mc, par1World, this.mc.session, this.netClientHandler);
     }
 
     /**
@@ -334,32 +383,33 @@ public class PlayerControllerMP extends PlayerController
      */
     public void attackEntity(EntityPlayer par1EntityPlayer, Entity par2Entity)
     {
-        syncCurrentPlayItem();
-        netClientHandler.addToSendQueue(new Packet7UseEntity(par1EntityPlayer.entityId, par2Entity.entityId, 1));
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new Packet7UseEntity(par1EntityPlayer.entityId, par2Entity.entityId, 1));
         par1EntityPlayer.attackTargetEntityWithCurrentItem(par2Entity);
     }
 
-    /**
-     * Interacts with an entity
-     */
-    public void interactWithEntity(EntityPlayer par1EntityPlayer, Entity par2Entity)
+    public boolean func_78768_b(EntityPlayer par1EntityPlayer, Entity par2Entity)
     {
-        syncCurrentPlayItem();
-        netClientHandler.addToSendQueue(new Packet7UseEntity(par1EntityPlayer.entityId, par2Entity.entityId, 0));
-        par1EntityPlayer.useCurrentItemOnEntity(par2Entity);
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new Packet7UseEntity(par1EntityPlayer.entityId, par2Entity.entityId, 0));
+        return par1EntityPlayer.interactWith(par2Entity);
     }
 
     public ItemStack windowClick(int par1, int par2, int par3, boolean par4, EntityPlayer par5EntityPlayer)
     {
-        short word0 = par5EntityPlayer.craftingInventory.getNextTransactionID(par5EntityPlayer.inventory);
-        ItemStack itemstack = super.windowClick(par1, par2, par3, par4, par5EntityPlayer);
-        netClientHandler.addToSendQueue(new Packet102WindowClick(par1, par2, par3, par4, itemstack, word0));
-        return itemstack;
+        short var6 = par5EntityPlayer.craftingInventory.getNextTransactionID(par5EntityPlayer.inventory);
+        ItemStack var7 = par5EntityPlayer.craftingInventory.slotClick(par2, par3, par4, par5EntityPlayer);
+        this.netClientHandler.addToSendQueue(new Packet102WindowClick(par1, par2, par3, par4, var7, var6));
+        return var7;
     }
 
-    public void func_40593_a(int par1, int par2)
+    /**
+     * GuiEnchantment uses this during multiplayer to tell PlayerControllerMP to send a packet indicating the
+     * enchantment action the player has taken.
+     */
+    public void sendEnchantPacket(int par1, int par2)
     {
-        netClientHandler.addToSendQueue(new Packet108EnchantItem(par1, par2));
+        this.netClientHandler.addToSendQueue(new Packet108EnchantItem(par1, par2));
     }
 
     /**
@@ -367,40 +417,28 @@ public class PlayerControllerMP extends PlayerController
      */
     public void sendSlotPacket(ItemStack par1ItemStack, int par2)
     {
-        if (creativeMode)
+        if (this.currentGameType.isCreative())
         {
-            netClientHandler.addToSendQueue(new Packet107CreativeSetSlot(par2, par1ItemStack));
+            this.netClientHandler.addToSendQueue(new Packet107CreativeSetSlot(par2, par1ItemStack));
         }
     }
 
-    public void func_35639_a(ItemStack par1ItemStack)
+    public void func_78752_a(ItemStack par1ItemStack)
     {
-        if (creativeMode && par1ItemStack != null)
+        if (this.currentGameType.isCreative() && par1ItemStack != null)
         {
-            netClientHandler.addToSendQueue(new Packet107CreativeSetSlot(-1, par1ItemStack));
-        }
-    }
-
-    public void func_20086_a(int par1, EntityPlayer par2EntityPlayer)
-    {
-        if (par1 == -9999)
-        {
-            return;
-        }
-        else
-        {
-            return;
+            this.netClientHandler.addToSendQueue(new Packet107CreativeSetSlot(-1, par1ItemStack));
         }
     }
 
     public void onStoppedUsingItem(EntityPlayer par1EntityPlayer)
     {
-        syncCurrentPlayItem();
-        netClientHandler.addToSendQueue(new Packet14BlockDig(5, 0, 0, 0, 255));
-        super.onStoppedUsingItem(par1EntityPlayer);
+        this.syncCurrentPlayItem();
+        this.netClientHandler.addToSendQueue(new Packet14BlockDig(5, 0, 0, 0, 255));
+        par1EntityPlayer.stopUsingItem();
     }
 
-    public boolean func_35642_f()
+    public boolean func_78763_f()
     {
         return true;
     }
@@ -410,7 +448,7 @@ public class PlayerControllerMP extends PlayerController
      */
     public boolean isNotCreative()
     {
-        return !creativeMode;
+        return !this.currentGameType.isCreative();
     }
 
     /**
@@ -418,7 +456,7 @@ public class PlayerControllerMP extends PlayerController
      */
     public boolean isInCreativeMode()
     {
-        return creativeMode;
+        return this.currentGameType.isCreative();
     }
 
     /**
@@ -426,6 +464,6 @@ public class PlayerControllerMP extends PlayerController
      */
     public boolean extendedReach()
     {
-        return creativeMode;
+        return this.currentGameType.isCreative();
     }
 }
