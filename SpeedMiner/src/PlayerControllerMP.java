@@ -150,6 +150,7 @@ public class PlayerControllerMP
             {
                 this.netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
                 func_78744_a(this.mc, this, par1, par2, par3, par4);
+                //this.blockHitDelay = 5;
 				this.blockHitDelay = mod_SpeedMiner.isSpeedMining() ? 0 : 5;  // <------------------- Modification
             }
             else if (!this.isHittingBlock || par1 != this.currentBlockX || par2 != this.currentBlockY || par3 != this.currentblockZ)
@@ -209,6 +210,7 @@ public class PlayerControllerMP
         }
         else if (this.currentGameType.isCreative())
         {
+            //this.blockHitDelay = 5;
 			this.blockHitDelay = mod_SpeedMiner.isSpeedMining() ? 0 : 5;  // <------------------- Modification
             this.netClientHandler.addToSendQueue(new Packet14BlockDig(0, par1, par2, par3, par4));
             func_78744_a(this.mc, this, par1, par2, par3, par4);
@@ -229,8 +231,6 @@ public class PlayerControllerMP
 				// Begin Modification
 				if (mod_SpeedMiner.isSpeedMining()) {
 					this.curBlockDamageMP += var6.getPlayerRelativeBlockHardness(this.mc.thePlayer, this.mc.thePlayer.worldObj, par1, par2, par3) * 1.372D;
-					// Need this line?
-					//prevBlockDamageMP = 0.36f;
 				} else {
 					// This was normal code
 					this.curBlockDamageMP += var6.getPlayerRelativeBlockHardness(this.mc.thePlayer, this.mc.thePlayer.worldObj, par1, par2, par3);
@@ -244,6 +244,7 @@ public class PlayerControllerMP
 
                 ++this.stepSoundTickCounter;
 
+                //if (this.curBlockDamageMP >= 1.0F)
                 if (this.curBlockDamageMP >= (mod_SpeedMiner.isSpeedMining() ? 0.825f : 1.0F))  // <------------------- Modification
                 {
                     this.isHittingBlock = false;
@@ -269,8 +270,8 @@ public class PlayerControllerMP
      */
     public float getBlockReachDistance()
     {
-		// Modification
 		return 5F;
+        //return this.currentGameType.isCreative() ? 5.0F : 4.5F;
     }
 
     public void updateController()
