@@ -42,6 +42,8 @@ Minecraft Forum post: http://www.minecraftforum.net/topic/482792-123-speedminer-
 TODO:
 - Auto tool switcher: switch from pick to shovel if the block changes from something like stone to sand.
 
+Note:  There is a lite version that does not require ModLoader and always enables speed mining.
+
 
 Build Instructions:
 -------------------
