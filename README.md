@@ -45,6 +45,16 @@ TODO:
 Note:  There is a lite version that does not require ModLoader and always enables speed mining.
 
 
+NoVoidFog
+---------
+- Disables "void fog" at the bottom of the world
+- Disables the particles there too
+
+No forum post.  Care to make one?
+
+Note:  There is only a lite version that doesn't need any other plugins and always disables the void fog and particles.
+
+
 Build Instructions:
 -------------------
 
