@@ -58,13 +58,13 @@ Note:  There is only a lite version that doesn't need any other plugins and alwa
 Build Instructions:
 -------------------
 
-1. Have Java, MCP, and Eclipse properly set up. Instructions can be found here: http://mcp.ocean-labs.de/
+1. Have Java and MCP properly set up.  Using Eclipse is recommended. Instructions can be found here: http://mcp.ocean-labs.de/
 2. Clean the MCP build environment (hint: use cleanup.bat for Windows and cleanup.sh for Mac/Linux.)
-3. Decompile minecraft with decompile.(bat/sh) *Note* Make sure you have Modloader installed in the minecraft.jar you are decompiling!
-4. Copy the files from the source directory of the mod you wish to build.
-5. Paste these files into the src/minecraft/net/minecraft/src folder.
-6. Now, open up eclipse. Set your working directory to your_mcp_directory/eclipse.
-7. Edit to your hearts content! When you want to run the client, simply hit the run button in eclipse.
+3. Decompile minecraft with decompile.(bat/sh) *Note* Make sure you have Modloader installed in the minecraft.jar you are decompiling if the plugin needs Modloader.
+4. Copy the files from the source directory of the mod you wish to build and paste them into the src/minecraft/net/minecraft/src folder.  If there is a "patch.txt" instead, then you need to run `patch -p1 < patch.txt` in the mcp folder.
+6. Open up your favorite editor and start working.  If you are using Eclipse, set your working directory to your_mcp_directory/eclipse.
+7. Work work work.
+8. When you want to run the client, simply hit the run button in Eclipse.  For you command-line folk, use startclient.sh or startserver.sh to test, then recompile.sh and reobfuscate.sh to rebuild the class files for distribution.
 
 Cheers,
 phlip9
